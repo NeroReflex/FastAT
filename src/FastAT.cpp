@@ -14,6 +14,8 @@ void doNothing(void) {
 const char OK[] = "OK\r\n\0";
 const char FAIL[] = "FAIL\r\n\0";
 const char ERROR[] = "ERROR\r\n\0";
+const char ENTER_DATA[] = ">";
+const char DATA_SENT[] = "SEND OK\r\n";
 
 FastAT::FastAT(HardwareSerial* serial) : serial(serial) {
 
@@ -59,14 +61,16 @@ bool FastAT::getBetweenFromResponse(uint16_t& length, char* bufferToFill, const 
 }
 
 uint8_t FastAT::findResponseOnBuffer(void) {
-    if (findOnResponse(OK) != (char*)NULL)
+    if (findOnResponse(DATA_SENT) != (char*)NULL)
+        return ESP_DATA_SENT;
+    else if (findOnResponse(OK) != (char*)NULL)
         return ESP_OK;
-    
-    if (findOnResponse(FAIL) != (char*)NULL)
+    else if (findOnResponse(FAIL) != (char*)NULL)
         return ESP_FAIL;
-    
-    if (findOnResponse(ERROR) != (char*)NULL)
+    else if (findOnResponse(ERROR) != (char*)NULL)
         return ESP_ERROR;
+    else if (findOnResponse(ENTER_DATA) != (char*)NULL)
+        return ESP_ENTER_DATA;
     
     return ESP_MISSING;
 }
@@ -93,15 +97,22 @@ uint8_t FastAT::fillBufferWithResponse(void) {
     return (uint8_t)(tmp - buffer);
 }
 
-uint8_t FastAT::waitForResponse(void) {
+uint8_t FastAT::waitForResponse(bool waiting_for_enter_data) {
     //clean the buffer from previous messages
     *buffer = 0x00;
     
     uint32_t it = 0;
     uint8_t response = 0x00;
-    do {
-        fillBufferWithResponse();
-    } while ((!(response = findResponseOnBuffer())) && ((++it) < MAX_WAIT_FOR_RESPONSE_IT));
+    
+    if (!waiting_for_enter_data) {
+        do {
+            fillBufferWithResponse();
+        } while ((!(response = findResponseOnBuffer())) && ((++it) < MAX_WAIT_FOR_RESPONSE_IT));
+    } else {
+        do {
+            fillBufferWithResponse();
+        } while ((!findOnResponse(">")) && ((++it) < MAX_WAIT_FOR_RESPONSE_IT));
+    }
 
 #if defined( DEBUG ) && (DEBUG == 1)
     Serial.println(buffer);
@@ -114,28 +125,31 @@ uint8_t FastAT::waitForResponse(void) {
 }
 
 void FastAT::flush(void) {
+    // parse messages arrived when I was not listening
     while (serial->available()) {
         fillBufferWithResponse();
         parseBufferForCallbacks();
     }
     
-    // Flush serial for a clean response to this command
+    // Flush serial for a clean response to the following command
     serial->flush();
+    
+    //flush the response buffer
+    *buffer = 0x00;
 }
 
 void FastAT::sendCommand(const char* cmdBuffer) {
     flush();
     
+#if defined( DEBUG ) && (DEBUG == 1)
+    Serial.print("$: ");
+#endif
+    
     // Send the first part of the command
-    serial->write(cmdBuffer);
+    rawSend((uint8_t*)cmdBuffer, strlen(cmdBuffer));
     
     //this is like pressing "Enter"
-    serial->write("\r\n");
-    
-#if defined( DEBUG ) && (DEBUG == 1)
-    Serial.print("> ");
-    Serial.println(cmdBuffer);
-#endif
+    rawSend("\r\n", 2);
 } 
 
 uint8_t FastAT::sendCommandAndWaitForResponse(const char* cmd) {
@@ -144,4 +158,15 @@ uint8_t FastAT::sendCommandAndWaitForResponse(const char* cmd) {
     
     //... and wait for the response
     return waitForResponse();
+}
+
+void FastAT::rawSend(const uint8_t* data, uint8_t length) {
+    while (length--) {
+        char current_byte = (char)(*(data++));
+        
+        serial->write(current_byte);
+#if defined( DEBUG ) && (DEBUG == 1)
+        Serial.print(current_byte);
+#endif
+    }
 }

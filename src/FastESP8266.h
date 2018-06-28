@@ -2,7 +2,11 @@
 
 #include <FastAT.h>
 
-#define MAX_CONNECTION_SLOTS 4
+//#define DEFAULT_TIMEOUT_TIME 7200
+
+#define ESP_SSL_MODE 0
+#define ESP_UDP_MODE 1
+#define ESP_TCP_MODE 2
 
 /**
  * Manage an ESP8266 device connected to a serial port.
@@ -31,6 +35,8 @@ public:
     
     // Networking
     bool ping(const char* domain, bool& timeout, uint16_t& ping);
+    bool openDataConnection(uint8_t mode, const char* domain, uint16_t port);
+    bool writeData(uint8_t*, uint16_t);
     
     // Set Callbacks
     void setWiFiConnectedCallback(void (*)(void));

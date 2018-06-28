@@ -167,3 +167,32 @@ bool FastESP8266::enableCustomDNS(uint8_t* dns_p, uint8_t* dns_s) {
 bool FastESP8266::disableCustomDNS(void) {
     return sendCommandAndWaitForResponse( "AT+CIPDNS_CUR=0" ) == ESP_OK;
 }
+
+bool FastESP8266::openDataConnection(uint8_t mode, const char* domain, uint16_t port) {
+    char mode_str[4] = { 0x00, 0x00, 0x00, 0x00 };
+    if (mode == ESP_SSL_MODE)
+        strcpy(mode_str, "SSL");
+    else if (mode == ESP_UDP_MODE)
+        strcpy(mode_str, "UDP");
+    else if (mode == ESP_TCP_MODE)
+        strcpy(mode_str, "TCP");
+    else
+        return false;
+    
+    char cmdBuffer[92] = "";
+    sprintf(cmdBuffer, "AT+CIPSTART=\"%s\",\"%s\",%d", mode_str, domain, port);
+    
+    return sendCommandAndWaitForResponse( cmdBuffer ) == ESP_OK;
+}
+
+bool FastESP8266::writeData(uint8_t* data, uint16_t length) {
+    char cmdBuffer[24];
+    sprintf(cmdBuffer, "AT+CIPSENDEX=%d", length);
+    
+    sendCommand( cmdBuffer );
+    waitForResponse(true);
+    
+    rawSend(data, length);
+    
+    return waitForResponse() == ESP_DATA_SENT;
+}

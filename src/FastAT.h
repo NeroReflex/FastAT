@@ -11,6 +11,8 @@
 #define ESP_OK              1
 #define ESP_FAIL            2
 #define ESP_ERROR           3
+#define ESP_ENTER_DATA      4
+#define ESP_DATA_SENT       5
 
 /* The size used to hold response for AT commands.
  * 
@@ -27,8 +29,9 @@ public:
 protected:
     uint8_t sendCommandAndWaitForResponse(const char*);
     void sendCommand(const char*);
+    void rawSend(const uint8_t*, uint8_t);
     void flush(void);
-    uint8_t waitForResponse(void);
+    uint8_t waitForResponse(bool waiting_for_enter_data = false);
     uint8_t findResponseOnBuffer(void);
     uint8_t fillBufferWithResponse(void);
     const char* findOnResponse(const char*);
