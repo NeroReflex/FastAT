@@ -113,12 +113,18 @@ uint8_t FastAT::waitForResponse(void) {
     return response;
 }
 
-void FastAT::sendCommand(const char* cmdBuffer) {
-    //avoid bad things
-    if (!serial) return;
+void FastAT::flush(void) {
+    while (serial->available()) {
+        fillBufferWithResponse();
+        parseBufferForCallbacks();
+    }
     
     // Flush serial for a clean response to this command
     serial->flush();
+}
+
+void FastAT::sendCommand(const char* cmdBuffer) {
+    flush();
     
     // Send the first part of the command
     serial->write(cmdBuffer);

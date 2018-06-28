@@ -42,6 +42,4 @@ protected:
     void (*callbackWiFiConnected)(void);
     void (*callbackWiFiDisconnected)(void);
     void (*callbackWiFiObtainedIP)(void);
-    Connection* connectionHandlers[MAX_CONNECTION_SLOTS] = { NULL };
-    uint8_t connectionSlots[MAX_CONNECTION_SLOTS] = { 0x00 };
 };

@@ -7,8 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "Connection.h"
-
 #define ESP_MISSING         0
 #define ESP_OK              1
 #define ESP_FAIL            2
@@ -29,6 +27,7 @@ public:
 protected:
     uint8_t sendCommandAndWaitForResponse(const char*);
     void sendCommand(const char*);
+    void flush(void);
     uint8_t waitForResponse(void);
     uint8_t findResponseOnBuffer(void);
     uint8_t fillBufferWithResponse(void);
